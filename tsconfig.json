@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+      "jsx": "react",
+      "target": "ESNext",
+      "module": "ESNext",
+      "moduleResolution": "Node",
+      "lib": ["DOM", "ESNext"],
+      "types": ["chrome"]
+    }
+  }
