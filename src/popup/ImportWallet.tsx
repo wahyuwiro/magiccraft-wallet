@@ -1,24 +1,17 @@
 import React, { useState } from "react";
 import { Wallet, Mnemonic } from "ethers";
 import { encrypt } from "../utils/crypto";
+import { saveKeystore, saveSession } from "../utils/walletStorage";
 
-interface ImportWalletProps {
-  onDone: (walletData: any) => void;
-  onBack: () => void;
-}
-
-export default function ImportWallet({ onDone, onBack }: ImportWalletProps) {
+export default function ImportWallet({ onDone, onBack }) {
   const [mnemonic, setMnemonic] = useState("");
   const [passphrase, setPassphrase] = useState("");
 
   const importWallet = async () => {
     try {
       const cleanedMnemonic = mnemonic.trim().split(/\s+/).join(" ");
+      const mnemonicObj = Mnemonic.fromPhrase(cleanedMnemonic, "en"); // validate
 
-      // Validate mnemonic (this throws if invalid)
-      Mnemonic.fromPhrase(cleanedMnemonic, "en");
-
-      // Create wallet
       const wallet = Wallet.fromPhrase(cleanedMnemonic);
 
       const walletData = {
@@ -27,12 +20,13 @@ export default function ImportWallet({ onDone, onBack }: ImportWalletProps) {
         mnemonic: cleanedMnemonic,
       };
 
-      const keystore = await encrypt(JSON.stringify(walletData), passphrase);
+      const encrypted = encrypt(JSON.stringify(walletData), passphrase);
 
-      chrome.storage.local.set({ keystore }, () => {
-        alert("Wallet imported and stored securely");
-        onDone(walletData);
-      });
+      await saveKeystore(encrypted);
+      await saveSession(walletData);
+
+      alert("Wallet imported and stored securely");
+      onDone(walletData);
     } catch (error) {
       alert("Mnemonic is invalid. Please check your input.");
       console.error(error);
@@ -40,14 +34,16 @@ export default function ImportWallet({ onDone, onBack }: ImportWalletProps) {
   };
 
   return (
-    <div>
+    <div className="container">
+      <h2>Import Wallet</h2>
       <button onClick={onBack}>Back</button>
+
       <textarea
         value={mnemonic}
         onChange={(e) => setMnemonic(e.target.value)}
         placeholder="Enter 12-word mnemonic"
         rows={3}
-        style={{ width: "100%" }}
+        style={{ width: "100%", marginTop: 8  }}
       />
       <input
         type="password"

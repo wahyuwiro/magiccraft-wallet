@@ -1,122 +1,154 @@
-import React, { useState, useEffect } from "react";
-import UnlockWallet from "./UnlockWallet";
-import Onboarding from "./Onboarding";
+import React, { useState, useEffect, useRef } from "react";
+import CreateWallet from "./CreateWallet";
 import ImportWallet from "./ImportWallet";
+import UnlockWallet from "./UnlockWallet";
+import Dashboard from "./Dashboard";
 import { decrypt } from "../utils/crypto";
+import {
+  getKeystore,
+  saveKeystore,
+  saveSession,
+  getSession,
+  clearSession,
+  clearWallet,
+} from "../utils/walletStorage";
+import NetworkSelector from "./NetworkSelector";
+import { NETWORKS } from "../utils/networks";
+import { getBalance } from "../utils/wallet";
 
-function Home({ walletData, onCreate, onImport }) {
-  return (
-    <div>
-      <h2>MagicCraft Wallet Dashboard</h2>
-      {walletData ? (
-        <>
-          <p><strong>Address:</strong> {walletData.address}</p>
-          <button onClick={onImport}>Import Wallet</button>
-        </>
-      ) : (
-        <>
-          <p>No wallet loaded.</p>
-          <button onClick={onCreate}>Create New Wallet</button>
-          <button onClick={onImport}>Import Wallet</button>
-        </>
-      )}
-    </div>
-  );
-}
+type View = "welcome" | "create" | "import" | "unlock" | "dashboard";
 
 export default function Popup() {
-  const [view, setView] = useState<"home" | "onboarding" | "import" | "unlock">("home");
+  const [view, setView] = useState<View>("welcome");
   const [walletData, setWalletData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const [selectedNetwork, setSelectedNetwork] = useState<keyof typeof NETWORKS>("holesky");
+  const [balance, setBalance] = useState<string>("0");
+
+  // Prevent multiple keystore checks
+  const initialized = useRef(false);
 
   useEffect(() => {
-    console.log("Popup useEffect running - checking keystore in storage...");
-    chrome.storage.local.get(["keystore"], ({ keystore }) => {
-      console.log("chrome.storage.local.get returned keystore:", keystore);
+    if (initialized.current) return; // only run once
+    initialized.current = true;
 
-      if (keystore) {
-        const password = prompt("Enter your passphrase to unlock wallet");
-        console.log("User entered passphrase:", password);
+    async function init() {
+      console.log("[Popup] Checking session and keystore on load...");
 
-        if (!password) {
-          console.log("No passphrase entered, staying on home view");
-          setView("home");
-          setLoading(false);
-          return;
-        }
-
-        try {
-          const decrypted = decrypt(keystore, password);
-          console.log("Decrypted string:", decrypted);
-
-          if (!decrypted) {
-            alert("Failed to decrypt with that passphrase");
-            setView("home");
-            setLoading(false);
-            return;
-          }
-
-          const data = JSON.parse(decrypted);
-          console.log("Parsed wallet data:", data);
-          setWalletData(data);
-          setView("home");
-          setLoading(false);
-        } catch (err) {
-          alert("Incorrect passphrase or corrupted data");
-          console.error("Decryption error:", err);
-          setView("home");
-          setLoading(false);
-        }
-      } else {
-        console.log("No keystore found in storage, default to home");
-        setView("home");
-        setLoading(false);
+      const session = await getSession();
+      if (session) {
+        console.log("[Popup] Session found, going to dashboard");
+        setWalletData(session);
+        setView("dashboard");
+        return;
       }
-    });
+
+      const keystore = await getKeystore();
+      if (keystore) {
+        console.log("[Popup] Keystore found, showing unlock screen");
+        setView("unlock");
+      } else {
+        console.log("[Popup] No keystore found, showing welcome screen");
+        setView("welcome");
+      }
+    }
+    init();
   }, []);
 
-  // Called after unlock/import/create success to set walletData and show home
-  const handleWalletDone = (data: any) => {
-    console.log("Wallet loaded or created:", data);
+    // Update balance when walletData or selectedNetwork changes
+    useEffect(() => {
+      if (walletData?.address) {
+        getBalance(walletData.address, selectedNetwork).then(setBalance);
+      }
+    }, [walletData, selectedNetwork]);
+
+  async function handleWalletReady(data: any, encryptedKeystore?: string) {
+    console.log("[Popup] Wallet ready", data);
+
     setWalletData(data);
-    setView("home");
-  };
+    setError("");
 
-  if (loading) {
-    return <div>Loading wallet data...</div>;
+    if (encryptedKeystore) {
+      await saveKeystore(encryptedKeystore);
+      console.log("[Popup] Saved keystore");
+    }
+
+    await saveSession(data);
+    console.log("[Popup] Saved session");
+
+    setView("dashboard");
   }
 
-  if (view === "unlock") {
-    return (
-      <UnlockWallet
-        onBack={() => setView("home")}
-        onUnlock={(data) => {
-          console.log("UnlockWallet onUnlock called with data:", data);
-          handleWalletDone(data);
-        }}
-      />
-    );
+  async function handleLogout() {
+    console.log("[Popup] Logout clicked");
+    await clearSession();
+    setWalletData(null);
+    setView("welcome");
   }
 
-  if (view === "onboarding") {
-    return <Onboarding onDone={handleWalletDone} onBack={() => setView("home")} />;
+  async function handleReset() {
+    console.log("[Popup] Reset clicked");
+    await clearSession();
+    await clearWallet();
+    setWalletData(null);
+    setView("welcome");
   }
 
-  if (view === "import") {
-    return <ImportWallet onDone={handleWalletDone} onBack={() => setView("home")} />;
-  }
+  useEffect(() => {
+    console.log("view :", view);
+  }, [view]);
 
   return (
-    <>
-      <div>
-        <h4>Debug walletData:</h4>
-        <pre>{JSON.stringify(walletData, null, 2)}</pre>
-      </div>
-      <Home
-        walletData={walletData}
-        onCreate={() => setView("onboarding")}
-        onImport={() => setView("import")}
-      />
-    </>
+    <div style={{ padding: 8, maxWidth: 400, margin: "auto" }}>
+      {view === "welcome" && (
+        <div>
+          <h1>🧙‍♂️ MagicCraft Wallet</h1>
+          <button onClick={() => setView("create")}>Create New Wallet</button>
+          <button onClick={() => setView("import")}>Import Wallet</button>
+          <button onClick={() => setView("unlock")}>Unlock Wallet</button>
+        </div>
+      )}
+
+      {view === "create" && (
+          <CreateWallet
+            onBack={() => setView("welcome")}
+            onDone={(walletData, encrypted) => {
+              // handle wallet ready state, store encrypted, etc.
+              setWalletData(walletData);
+              setView("dashboard");
+            }}
+          />
+        
+      )}
+
+      {view === "import" && (
+        <ImportWallet
+          onBack={() => setView("welcome")}
+          onDone={(data, encrypted) => handleWalletReady(data, encrypted)}
+        />
+      )}
+
+      {view === "unlock" && (
+        <UnlockWallet
+          onBack={() => setView("welcome")}
+          onUnlock={(data) => handleWalletReady(data)}
+        />
+      )}
+
+      {view === "dashboard" && walletData && (
+        <Dashboard
+          walletData={walletData}
+          onLogout={handleLogout}
+        />
+      )}
+
+      {error && (
+        <p style={{ color: "red", marginTop: 12 }}>
+          <strong>Error: </strong>
+          {error}
+        </p>
+      )}
+    </div>
   );
 }

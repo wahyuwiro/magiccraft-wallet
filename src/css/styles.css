@@ -1,0 +1,159 @@
+html, body, #root {
+  width: 360px;
+  height: 600px;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  background: #1A1B2F;
+  color: #F1C40F;
+}
+p {
+  margin: 4px 0;
+}
+
+.modal-backdrop {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: #1A1B2F;
+  color: white;
+  padding: 20px;
+  border-radius: 12px;
+  width: 300px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+button.confirm {
+  background: #6E4B9E;
+  color: white;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+}
+
+button.cancel {
+  background: gray;
+  color: white;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+}
+
+.container {
+  padding: 16px;
+  background-color: #1A1B2F;
+  color: #F1C40F;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  background-color: #1A1B2F;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #F1C40F;
+  z-index: 10;
+}
+
+.scroll-body {
+  height: 100%;
+  overflow-y: auto;
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+.scroll-body::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.wallet-header {
+  position: sticky;
+  top: 0;
+  background: #1A1B2F;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid #6E4B9E;
+  z-index: 100;
+}
+
+.network {
+  font-size: 12px;
+  color: #F1C40F;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  margin-bottom: 4px;
+}
+
+.network .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.wallet-info {
+  margin-bottom: 4px;
+}
+
+.identicon {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  margin-right: 6px;
+}
+
+.address {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+}
+
+.address p{
+  font-size: 14px;
+  color: #F1C40F;
+}
+.address button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0px;
+}
+.address span {
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  background-color: rgb(241, 196, 15);
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+}
+
+.copy-icon {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.balance {
+  font-size: 16px;
+  font-weight: bold;
+  color: #F1C40F;
+}
