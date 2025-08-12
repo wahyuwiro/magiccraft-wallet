@@ -1,8 +1,8 @@
 // src/popup/CreateWallet.tsx
 import React, { useState } from "react";
 import { generateWallet, saveWallet } from "../utils/wallet";
-import { encrypt } from "../utils/crypto";
-
+import { encryptData } from "../utils/crypto";
+import { saveSession } from "../utils/walletStorage";
 interface CreateWalletProps {
   onDone: (walletData: any, encrypted: string) => void;
   onBack: () => void;
@@ -25,16 +25,20 @@ export default function CreateWallet({ onDone, onBack }: CreateWalletProps) {
       mnemonic: newWallet.mnemonic,
     };
 
-    const encrypted = encrypt(JSON.stringify(walletData), passphrase);
+    const encrypted = encryptData(JSON.stringify(walletData), passphrase);
     saveWallet(encrypted);
+    saveSession(walletData);
 
     onDone(walletData, encrypted);
   };
 
   return (
-    <div style={{ padding: 16, maxWidth: 400, margin: "auto" }}>
-      <button onClick={onBack}>Back</button>
-      <h2>Create New Wallet</h2>
+    <div className="container">
+      <div className="header header-sec">
+        <h2>Create New Wallet</h2>
+      </div>
+      <button style={{ maxWidth: "70px", marginTop: 8}} onClick={onBack}>Back</button>
+
       <input
         type="password"
         placeholder="Set passphrase"

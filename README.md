@@ -74,7 +74,7 @@ chrome://extensions/
 
 
 🛠 Tech Stack
-` **React **(UI framework)
+- **React**(UI framework)
 - **ethers.js** (Blockchain interaction)
 - **Vite** (Fast bundler for extensions)
 - **WebExtension APIs** (Browser integration)
@@ -83,4 +83,4 @@ chrome://extensions/
 
 🌐 Live Demo
 
-- **Demo Video:** [YouTube](https://youtu.be/9pt8eOaEkH4)
+- **Demo Video:** [YouTube](https://youtu.be/plsd43wxiCI)

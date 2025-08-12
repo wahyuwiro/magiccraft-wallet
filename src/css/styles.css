@@ -1,12 +1,38 @@
+/* root sizing */
 html, body, #root {
   width: 360px;
   height: 600px;
   margin: 0;
   padding: 0;
-  overflow: auto;
   background: #1A1B2F;
   color: #F1C40F;
+  overflow: hidden; /* only inner scroll will be used */
+  -webkit-font-smoothing: antialiased;
+  box-sizing: border-box;
 }
+*, *::before, *::after { box-sizing: inherit; }
+
+/* wrapper that used to be inline */
+.app-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+/* the inner wrapper that constrains width but fills height */
+.app-inner {
+  flex: 1;                 /* CRITICAL: fill available height */
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
 p {
   margin: 4px 0;
 }
@@ -53,9 +79,15 @@ button.cancel {
 }
 
 .container {
-  padding: 16px;
+  padding: 8px;
   background-color: #1A1B2F;
   color: #F1C40F;
+
+  display: flex;
+  flex-direction: column;
+  flex: 1;      /* allow the scroll-body to take remaining space */
+  min-height: 0; /* VERY IMPORTANT so children can overflow */
+  background: #1A1B2F;
 }
 
 .header {
@@ -63,33 +95,38 @@ button.cancel {
   top: 0;
   background-color: #1A1B2F;
   padding: 12px;
+  padding-top: 0px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid #F1C40F;
   z-index: 10;
+  /* border-bottom: 1px solid #6E4B9E; */
 }
-
+.header-sec h2, .header-sec h1 {
+  margin: 0;
+}
 .scroll-body {
-  height: 100%;
+  max-height: 500px; /* or whatever fits your layout */
   overflow-y: auto;
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;     /* Firefox */
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(0,0,0,0.1) transparent; /* Firefox */
+  padding-right: 8px;
+  padding-bottom: 16px;
 }
 
+/* Chrome, Edge, Safari */
 .scroll-body::-webkit-scrollbar {
-  display: none; /* Chrome/Safari */
+  width: 4px; /* thinner */
 }
 
-.wallet-header {
-  position: sticky;
-  top: 0;
-  background: #1A1B2F;
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  border-bottom: 1px solid #6E4B9E;
-  z-index: 100;
+.scroll-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-body::-webkit-scrollbar-thumb {
+  background-color: rgba(0,0,0,0.2);
+  border-radius: 10px;
 }
 
 .network {
@@ -101,16 +138,23 @@ button.cancel {
   margin-bottom: 4px;
 }
 
-.network .dot {
-  width: 8px;
-  height: 8px;
+.wallet-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.avatar {
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  display: inline-block;
-  margin-right: 6px;
+  background: #fff;
+  padding: 6px;
 }
 
-.wallet-info {
-  margin-bottom: 4px;
+.avatar img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
 }
 
 .identicon {
@@ -156,4 +200,18 @@ button.cancel {
   font-size: 16px;
   font-weight: bold;
   color: #F1C40F;
+}
+
+.scrollable::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollable::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+.welcome {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
 }

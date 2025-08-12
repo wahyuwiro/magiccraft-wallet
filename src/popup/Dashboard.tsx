@@ -1,12 +1,15 @@
-import { ethers } from "ethers";
+// src/popup/Dashboard.tsx
+import { ethers, isAddress  } from "ethers";
 import React, { useEffect, useState, useRef  } from "react";
-import { getBalance, getRecentTransactions } from "../utils/wallet";
+import { getBalance, getMcrtBalance, getRecentTransactions, getRecentTokenTransactions } from "../utils/wallet";
 import { sendTransaction } from "../utils/transactions";
 import { NETWORKS } from "../utils/networks";
 import NetworkSelector from "./NetworkSelector";
 import { QRCodeCanvas } from "qrcode.react";
 import TransactionConfirmModal from "../components/TransactionConfirmModal";
 import jsQR from "jsqr";
+import { sendMCRT } from "../utils/sendMCRT"; // new helper function
+import { MCRT_ADDRESSES } from "../utils/constants";
 
 interface DashboardProps {
   walletData: any;
@@ -20,7 +23,11 @@ export default function Dashboard({
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
   const [sending, setSending] = useState(false);
-  const [selectedNetwork, setSelectedNetwork] = useState<keyof typeof NETWORKS>("holesky");
+
+  const [tokenType, setTokenType] = useState<"native" | "mcrt">("native");
+  const defaultNetwork = tokenType === "native" ? "holesky" : "bsc";
+  const [selectedNetwork, setSelectedNetwork] = useState<keyof typeof NETWORKS>(defaultNetwork);
+
   const [transactions, setTransactions] = useState([]);
   const [copied, setCopied] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -31,29 +38,45 @@ export default function Dashboard({
   const shortAddress = (addr) =>
     addr ? `${addr.slice(0, 15)}...${addr.slice(-3)}` : "";
   
-  useEffect(() => {
-    console.log('walletData:', walletData);
-  },[walletData]);
-
   async function fetchTransactions() {
     try {
     if (!walletData?.address) return;
-    const txs = await getRecentTransactions(walletData.address, selectedNetwork);
-    console.log("Transactions fetched:", txs);
+    let networkToUse = selectedNetwork;
+    if (tokenType === "mcrt" && !MCRT_ADDRESSES[selectedNetwork]) {
+      setSelectedNetwork(defaultNetwork);
+      networkToUse = defaultNetwork;
+    }
+    let txs:any;
+    if (tokenType === "native") {
+      txs = await getRecentTransactions(walletData.address, networkToUse);
+    } else {
+      txs = await getRecentTokenTransactions(walletData.address, MCRT_ADDRESSES[networkToUse], networkToUse);
+    }
+
     setTransactions(txs);
     } catch (error) {
-      console.error("Error fetching transactions:", error);
+      console.log("Error fetching transactions:", error);
     }
   }
 
   async function fetchBalance() {
     try {
       if (!walletData?.address) return;
-      const bal = await getBalance(walletData.address, selectedNetwork);
+      let bal;
+      if (tokenType === "native") {
+        bal = await getBalance(walletData.address, selectedNetwork);
+      } else {
+        let networkToUse = selectedNetwork;
+        if (!MCRT_ADDRESSES[selectedNetwork]) {
+          setSelectedNetwork(defaultNetwork);
+          networkToUse = defaultNetwork;
+        }
+  
+        bal = await getMcrtBalance(walletData.address, networkToUse);        
+      }
 
       setBalance(bal);
     } catch (error) {
-      console.log("Error fetchBalance :", error);
       setBalance("Error fetching balance");
     }
   }
@@ -65,34 +88,59 @@ export default function Dashboard({
   
   useEffect(() => {
     refreshData();
-  }, [walletData.address, selectedNetwork]);
+  }, [walletData.address, selectedNetwork, tokenType]);
   
   const handleSendClick = () => {
     if (!to || !amount) return;
+    if (!isAddress(to)) {
+      alert("Invalid recipient address");
+      return;
+    }
+
+    // Check if amount is a valid number
+    const amountNum = Number(amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      alert("Amount must be a number greater than zero");
+      return;
+    }
+
     setShowConfirm(true);
   };
   const handleConfirmSend  = async () => {
-    console.log('netConfig :',netConfig);
     if (!to || !amount) {
       alert("Please enter recipient address and amount.");
       return;
     }
+
     setShowConfirm(false);
     setStatus("Pending...");
     setSending(true);
     try {
-      const txHash = await sendTransaction(
-        walletData.privateKey, 
-        to, 
-        amount,
-        netConfig.rpc,
-        netConfig.chainId
-      );
+      let txHash;
+
+      if (tokenType === "native") {
+        txHash = await sendTransaction(
+          walletData.privateKey,
+          to,
+          amount,
+          netConfig.rpc,
+          netConfig.chainId
+        );
+      }else{
+        const { hash, receipt } = await sendMCRT(
+          walletData.privateKey,
+          to,
+          amount,
+          netConfig.rpc,
+          netConfig.mcrtKey || netConfig.name.toLowerCase(),
+        );
+        txHash = hash;
+      }
+  
       setTxHash(txHash);
       alert(`Transaction sent! Hash: ${txHash}`);
 
-      // Refresh balance after sending
-     
+      // Refresh balance after sending     
       const provider = new ethers.JsonRpcProvider(netConfig.rpc);
       await provider.waitForTransaction(txHash);
 
@@ -105,7 +153,7 @@ export default function Dashboard({
       setTo("");
       setAmount("");
     } catch (err) {
-      console.error("Transaction error:", err);
+      console.log("Transaction error:", err);
 
       alert("Failed to send transaction");
     } finally {
@@ -119,7 +167,7 @@ export default function Dashboard({
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       })
-      .catch(err => console.error("Failed to copy address:", err));
+      .catch(err => console.log("Failed to copy address:", err));
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -154,25 +202,35 @@ export default function Dashboard({
   return (
     <div className="container">
       <div className="header">
-        <div className="wallet-info">          
-          <div className="address">
-            <p>{shortAddress(walletData.address)}</p>
-            <button
-              onClick={copyAddress}
-            >
-              <span className="copy-icon"
-                style={{
-                  maskImage: `url(${copied ? "/icons/copy-success.svg" : "/icons/copy.svg"})`,
-                  WebkitMaskImage: `url(${copied ? "/icons/copy-success.svg" : "/icons/copy.svg"})`,
-                  backgroundColor: copied ? "#4CAF50" : "#F1C40F", // gold or green
-                }}
-              />
-            </button>
+        <div className="wallet-info">
+          <div className="avatar">
+            <img
+              src={`icons/avatar.png`} 
+              alt="Account Avatar"
+            />
           </div>
-          <div className="balance">{balance} ETH</div>
+          <div>
+            <div className="address">
+              <p>{shortAddress(walletData.address)}</p>
+              <button
+                onClick={copyAddress}
+              >
+                <span className="copy-icon"
+                  style={{
+                    maskImage: `url(${copied ? "/icons/copy-success.svg" : "/icons/copy.svg"})`,
+                    WebkitMaskImage: `url(${copied ? "/icons/copy-success.svg" : "/icons/copy.svg"})`,
+                    backgroundColor: copied ? "#4CAF50" : "#F1C40F", // gold or green
+                  }}
+                />
+              </button>
+            </div>
+            <div className="balance">
+              {Number(balance).toLocaleString(undefined, { maximumFractionDigits: 4 })} ETH
+            </div>
+          </div>
         </div>
       </div>
-      <div className="scroll-body">
+      <div className="scroll-body scrollable">
         <h2>🧙‍♂️ Dashboard</h2>
 
         {/* QR Code */}
@@ -187,11 +245,20 @@ export default function Dashboard({
 
         <div style={{ marginTop: 16 }}>
           <h3>Send ETH</h3>
+          <select
+            value={tokenType}
+            onChange={(e) => setTokenType(e.target.value as "native" | "mcrt")}
+            style={{ width: "100%", marginBottom: 8 }}
+          >
+            <option value="native">Native Coin</option>
+            <option value="mcrt">MCRT</option>
+          </select>
+
           <NetworkSelector
             selectedNetwork={selectedNetwork}
             onChange={setSelectedNetwork}
+            tokenType={tokenType}
           />
-          
           <div 
             onDrop={handleDrop} 
             onDragOver={(e) => e.preventDefault()} 
@@ -247,8 +314,9 @@ export default function Dashboard({
 
         {showConfirm && (
           <TransactionConfirmModal
-            from={walletData.address}
-            to={to}
+            type={tokenType}
+            from={shortAddress(walletData.address)}
+            to={shortAddress(to)}
             amount={amount}
             networkName={netConfig?.name || "Unknown Network"}
             onConfirm={handleConfirmSend}

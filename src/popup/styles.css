@@ -1,8 +1,0 @@
-:root{
-    --bg: #1A1B2F;
-    --accent: #6E4B9E;
-    --gold: #F1C40F;
-}
-body { background: var(--bg); color: var(--gold); font-family: Inter, sans-serif; }
-  
-  

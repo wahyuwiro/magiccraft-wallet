@@ -3,7 +3,6 @@ import CreateWallet from "./CreateWallet";
 import ImportWallet from "./ImportWallet";
 import UnlockWallet from "./UnlockWallet";
 import Dashboard from "./Dashboard";
-import { decrypt } from "../utils/crypto";
 import {
   getKeystore,
   saveKeystore,
@@ -12,7 +11,6 @@ import {
   clearSession,
   clearWallet,
 } from "../utils/walletStorage";
-import NetworkSelector from "./NetworkSelector";
 import { NETWORKS } from "../utils/networks";
 import { getBalance } from "../utils/wallet";
 
@@ -23,9 +21,6 @@ export default function Popup() {
   const [walletData, setWalletData] = useState<any>(null);
   const [error, setError] = useState("");
 
-  const [selectedNetwork, setSelectedNetwork] = useState<keyof typeof NETWORKS>("holesky");
-  const [balance, setBalance] = useState<string>("0");
-
   // Prevent multiple keystore checks
   const initialized = useRef(false);
 
@@ -33,12 +28,9 @@ export default function Popup() {
     if (initialized.current) return; // only run once
     initialized.current = true;
 
-    async function init() {
-      console.log("[Popup] Checking session and keystore on load...");
-
+    async function init() {  
       const session = await getSession();
       if (session) {
-        console.log("[Popup] Session found, going to dashboard");
         setWalletData(session);
         setView("dashboard");
         return;
@@ -46,67 +38,52 @@ export default function Popup() {
 
       const keystore = await getKeystore();
       if (keystore) {
-        console.log("[Popup] Keystore found, showing unlock screen");
         setView("unlock");
       } else {
-        console.log("[Popup] No keystore found, showing welcome screen");
         setView("welcome");
       }
     }
     init();
   }, []);
 
-    // Update balance when walletData or selectedNetwork changes
-    useEffect(() => {
-      if (walletData?.address) {
-        getBalance(walletData.address, selectedNetwork).then(setBalance);
-      }
-    }, [walletData, selectedNetwork]);
-
   async function handleWalletReady(data: any, encryptedKeystore?: string) {
-    console.log("[Popup] Wallet ready", data);
-
     setWalletData(data);
     setError("");
 
     if (encryptedKeystore) {
-      await saveKeystore(encryptedKeystore);
-      console.log("[Popup] Saved keystore");
+      await saveKeystore(encryptedKeystore, data.passphrase); // Use a default passphrase for now
     }
 
     await saveSession(data);
-    console.log("[Popup] Saved session");
-
     setView("dashboard");
   }
 
   async function handleLogout() {
-    console.log("[Popup] Logout clicked");
     await clearSession();
     setWalletData(null);
     setView("welcome");
   }
 
   async function handleReset() {
-    console.log("[Popup] Reset clicked");
     await clearSession();
     await clearWallet();
     setWalletData(null);
     setView("welcome");
   }
 
-  useEffect(() => {
-    console.log("view :", view);
-  }, [view]);
-
   return (
-    <div style={{ padding: 8, maxWidth: 400, margin: "auto" }}>
+    <div class="app-wrapper">
+    <div  class="app-inner" style={{ padding: 8, maxWidth: 400, margin: "auto" }}>
       {view === "welcome" && (
         <div>
-          <h1>🧙‍♂️ MagicCraft Wallet</h1>
-          <button onClick={() => setView("create")}>Create New Wallet</button>
-          <button onClick={() => setView("import")}>Import Wallet</button>
-          <button onClick={() => setView("unlock")}>Unlock Wallet</button>
+          <div className="header header-sec">
+            <h1>🧙‍♂️ MagicCraft Wallet</h1>
+          </div>
+          <div className="welcome" >
+            <button onClick={() => setView("create")}>Create New Wallet</button>
+            <button onClick={() => setView("import")}>Import Wallet</button>
+            <button onClick={() => setView("unlock")}>Unlock Wallet</button>
+          </div>
         </div>
       )}
 
@@ -149,6 +126,7 @@ export default function Popup() {
           {error}
         </p>
       )}
+    </div>
     </div>
   );
 }

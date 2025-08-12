@@ -1,36 +1,42 @@
+// src/popup/UnlockWallet.tsx
 import React, { useState } from "react";
-import { decrypt } from "../utils/crypto";
+import { decryptData } from "../utils/crypto";
 import { saveSession } from "../utils/walletStorage";
 
 export default function UnlockWallet({ onUnlock, onBack }) {
   const [passphrase, setPassphrase] = useState("");
 
   const unlock = () => {
-    chrome.storage.local.get(["keystore"], async ({ keystore }) => {
+    chrome.storage.local.get(["keystore"], async ({ keystore }) => {  
       if (!keystore) {
         alert("No wallet found. Please create or import one.");
         onBack();
         return;
       }
-
+  
       try {
-        const decrypted = decrypt(keystore, passphrase);
+        const decrypted = decryptData(keystore, passphrase); // use new decryptData
         if (!decrypted) throw new Error("Decryption failed");
+  
         const walletData = JSON.parse(decrypted);
-
+  
         await saveSession(walletData);
         onUnlock(walletData);
       } catch (err) {
         alert("Failed to unlock wallet: incorrect passphrase");
-        console.error(err);
+        console.log(err);
       }
     });
   };
+  
 
   return (
     <div className="container">
-      <button onClick={onBack}>Back</button>
-      <h2>Unlock Wallet</h2>
+      <div className="header header-sec">
+        <h2>Unlock Wallet</h2>
+      </div>
+
+      <button style={{ maxWidth: "70px", marginTop: 8}} onClick={onBack}>Back</button>
       <input
         type="password"
         placeholder="Enter passphrase"

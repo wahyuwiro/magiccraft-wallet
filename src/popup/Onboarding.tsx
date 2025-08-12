@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import UnlockWallet from "./UnlockWallet";
 import ImportWallet from "./ImportWallet";
-import CreateWallet from "./CreateWallet"; // Your existing component
-import Dashboard from "./Dashboard";       // Your wallet dashboard component
+import CreateWallet from "./CreateWallet";
+import { KEYSTORE_KEY } from "../utils/walletStorage";
 
 export default function Onboarding({ onDone, onBack }) {
   const [view, setView] = useState<"main" | "import" | "unlock" | "dashboard" | "create">("main");
 
   useEffect(() => {
-    chrome.storage.local.get(["keystore"], ({ keystore }) => {
+    chrome.storage.local.get([KEYSTORE_KEY], ({ keystore }) => {
       if (keystore) {
         setView("unlock");
       } else {
@@ -24,7 +24,7 @@ export default function Onboarding({ onDone, onBack }) {
 
   if (view === "main") {
     return (
-      <div>
+      <div>        
         <h2>Welcome to MagicCraft Wallet</h2>
         <button onClick={() => setView("create")}>Create New Wallet</button>
         <button onClick={() => setView("import")}>Import Wallet</button>

@@ -3,6 +3,7 @@
         "ACYBK",
         "apikey",
         "BSCSCAN",
+        "contractaddress",
         "ethersproject",
         "hdnode",
         "holesky",
@@ -11,9 +12,15 @@
         "jsqr",
         "KZBG",
         "magiccraft",
+        "mainnets",
+        "MCRT",
         "POLYGONSCAN",
         "qrcode",
         "samrum",
+        "satoshi",
+        "scure",
+        "tokentx",
+        "wordlist",
         "wordlists",
         "YHDEHV"
     ]

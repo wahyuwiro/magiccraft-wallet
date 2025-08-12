@@ -7,6 +7,7 @@ interface Props {
   amount: string;
   networkName: string;
   gasFee?: string;
+  type?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -17,6 +18,7 @@ export default function TransactionConfirmModal({
   amount,
   networkName,
   gasFee,
+  type = "native", // default to 'transfer'
   onConfirm,
   onCancel
 }: Props) {
@@ -24,6 +26,7 @@ export default function TransactionConfirmModal({
     <div className="modal-backdrop">
       <div className="modal">
         <h3>Confirm Transaction</h3>
+        <p><strong>Type:</strong> {type}</p>
         <p><strong>From:</strong> {from}</p>
         <p><strong>To:</strong> {to}</p>
         <p><strong>Amount:</strong> {amount}</p>

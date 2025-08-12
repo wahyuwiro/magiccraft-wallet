@@ -1,42 +1,58 @@
+// src/popup/ImportWallet.tsx
 import React, { useState } from "react";
-import { Wallet, Mnemonic } from "ethers";
-import { encrypt } from "../utils/crypto";
+import { HDNodeWallet } from "ethers";
 import { saveKeystore, saveSession } from "../utils/walletStorage";
+import { mnemonicToSeedSync } from "@scure/bip39";
+import { isValidMnemonicWords } from "../utils/wordlist-en";
 
 export default function ImportWallet({ onDone, onBack }) {
   const [mnemonic, setMnemonic] = useState("");
   const [passphrase, setPassphrase] = useState("");
-
+    
   const importWallet = async () => {
     try {
-      const cleanedMnemonic = mnemonic.trim().split(/\s+/).join(" ");
-      const mnemonicObj = Mnemonic.fromPhrase(cleanedMnemonic, "en"); // validate
-
-      const wallet = Wallet.fromPhrase(cleanedMnemonic);
-
+      if (!mnemonic || !passphrase) {
+        alert("Please enter your mnemonic and password.");
+        return;
+      }
+  
+      const cleanedMnemonic = mnemonic.trim().toLowerCase().split(/\s+/).join(" ");
+  
+      if (!isValidMnemonicWords(cleanedMnemonic)) {
+        alert("Mnemonic contains invalid words.");
+        return;
+      }
+  
+      // Get the seed from mnemonic
+      const seed = mnemonicToSeedSync(cleanedMnemonic);
+  
+      // Derive wallet from BIP44 path m/44'/60'/0'/0/0
+      const hdNode = HDNodeWallet.fromSeed(seed);
+      const wallet = hdNode.derivePath("m/44'/60'/0'/0/0");
+  
       const walletData = {
         address: wallet.address,
         privateKey: wallet.privateKey,
         mnemonic: cleanedMnemonic,
       };
-
-      const encrypted = encrypt(JSON.stringify(walletData), passphrase);
-
-      await saveKeystore(encrypted);
+  
+      saveKeystore(wallet.privateKey, passphrase);
       await saveSession(walletData);
-
+  
       alert("Wallet imported and stored securely");
-      onDone(walletData);
+      onDone({...walletData,passphrase:passphrase});
     } catch (error) {
-      alert("Mnemonic is invalid. Please check your input.");
-      console.error(error);
+      console.log("Error importing wallet:", error);
+      alert("Failed to import wallet. Please check your inputs.");
     }
   };
 
   return (
     <div className="container">
-      <h2>Import Wallet</h2>
-      <button onClick={onBack}>Back</button>
+      <div className="header header-sec">
+        <h2>Import Wallet</h2>
+      </div>
+      <button style={{ maxWidth: "70px", marginTop: 8}} onClick={onBack}>Back</button>
 
       <textarea
         value={mnemonic}

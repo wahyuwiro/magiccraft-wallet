@@ -5,7 +5,7 @@
   "version": "1.0",
   "permissions": ["storage", "clipboardWrite", "activeTab", "scripting"],
   "background": {
-    "service_worker": "src/background.ts"
+    "service_worker": "background.ts"
   },
   "action": {
       "default_title": "MagicCraft Wallet",
@@ -24,11 +24,8 @@
   "content_scripts": [
       {
           "matches": ["<all_urls>"],
-          "js": ["src/content.ts"],
+          "js": ["content.ts"],
           "run_at": "document_start"
       }
-  ],
-
-
-  "host_permissions": ["<all_urls>"]
+  ]
 }

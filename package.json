@@ -15,6 +15,7 @@
   "description": "",
   "dependencies": {
     "@ethersproject/hdnode": "^5.8.0",
+    "@scure/bip39": "^1.6.0",
     "bip39": "^3.1.0",
     "crypto-js": "^4.2.0",
     "ethers": "^6.15.0",
